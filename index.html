@@ -21,6 +21,14 @@
     h1 {
       font-size: 2rem;
       color: #c0392b;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    .event-name {
+      font-size: 1rem;
+      color: #e74c3c;
+      font-weight: bold;
       margin-bottom: 6px;
       text-align: center;
     }
@@ -134,18 +142,15 @@
       transition: border-color 0.2s;
       font-family: inherit;
     }
-    .name-input-area input:focus {
-      border-color: #e74c3c;
-    }
+    .name-input-area input:focus { border-color: #e74c3c; }
 
     .retake-area {
       display: none;
       gap: 10px;
       margin-top: 12px;
     }
-    .retake-area.visible {
-      display: flex;
-    }
+    .retake-area.visible { display: flex; }
+
     #okBtn {
       flex: 1;
       padding: 14px 10px;
@@ -160,6 +165,7 @@
       transition: background 0.2s;
     }
     #okBtn:hover { background: #d0f0e8; }
+
     #retakeBtn {
       flex: 1;
       padding: 14px 10px;
@@ -179,6 +185,7 @@
 <body>
 
   <h1>ありがとうコレクター</h1>
+  <p class="event-name" id="eventName"></p>
   <p class="subtitle">みんなの「ありがとう」を集めてひとつの音声にします</p>
 
   <div class="card">
@@ -209,6 +216,8 @@
   </div>
 
 <script>
+const eventId = window.location.pathname.split('/')[2];
+
 const recordBtn = document.getElementById('recordBtn');
 const countdownEl = document.getElementById('countdown');
 const countNum = document.getElementById('countNum');
@@ -218,10 +227,16 @@ const retakeArea = document.getElementById('retakeArea');
 const okBtn = document.getElementById('okBtn');
 const retakeBtn = document.getElementById('retakeBtn');
 
-let lastRecording = null; // { filename, deleteToken, name }
+let lastRecording = null;
 
 function showRetakeArea() { retakeArea.classList.add('visible'); }
 function hideRetakeArea() { retakeArea.classList.remove('visible'); }
+
+// イベント名を表示
+fetch(`/event-info/${eventId}`)
+  .then(r => r.json())
+  .then(d => { document.getElementById('eventName').textContent = d.name; document.title = d.name + ' | ありがとうコレクター'; })
+  .catch(() => {});
 
 // ---- 録音 ----
 function getSupportedMimeType() {
@@ -229,27 +244,18 @@ function getSupportedMimeType() {
   return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
 }
 
-// ---- WAVエンコード（クライアント側） ----
 function encodeWAV(audioBuffer) {
   const numChannels = audioBuffer.numberOfChannels;
   const sampleRate = audioBuffer.sampleRate;
   const length = audioBuffer.length * numChannels;
   const interleaved = new Float32Array(length);
-
   for (let ch = 0; ch < numChannels; ch++) {
     const data = audioBuffer.getChannelData(ch);
-    for (let i = 0; i < audioBuffer.length; i++) {
-      interleaved[i * numChannels + ch] = data[i];
-    }
+    for (let i = 0; i < audioBuffer.length; i++) interleaved[i * numChannels + ch] = data[i];
   }
-
   const buffer = new ArrayBuffer(44 + length * 2);
   const view = new DataView(buffer);
-
-  function writeStr(offset, str) {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  }
-
+  function writeStr(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
   writeStr(0, 'RIFF');
   view.setUint32(4, 36 + length * 2, true);
   writeStr(8, 'WAVE');
@@ -263,24 +269,18 @@ function encodeWAV(audioBuffer) {
   view.setUint16(34, 16, true);
   writeStr(36, 'data');
   view.setUint32(40, length * 2, true);
-
   let offset = 44;
   for (let i = 0; i < interleaved.length; i++) {
     const s = Math.max(-1, Math.min(1, interleaved[i]));
     view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
     offset += 2;
   }
-
   return buffer;
 }
 
 async function startRecording() {
   const name = nameInput.value.trim();
-  if (!name) {
-    setStatus('お名前を入力してください', 'error');
-    nameInput.focus();
-    return;
-  }
+  if (!name) { setStatus('お名前を入力してください', 'error'); nameInput.focus(); return; }
 
   lastRecording = null;
   hideRetakeArea();
@@ -290,7 +290,7 @@ async function startRecording() {
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (e) {
+  } catch {
     setStatus('マイクが使えません。許可してください。', 'error');
     recordBtn.disabled = false;
     return;
@@ -303,29 +303,25 @@ async function startRecording() {
 
   mediaRecorder.onstop = async () => {
     stream.getTracks().forEach(t => t.stop());
-
     try {
       setStatus('サーバーにアップロード中...', '');
-
       const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
       const arrayBuf = await blob.arrayBuffer();
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const decoded = await audioCtx.decodeAudioData(arrayBuf);
       await audioCtx.close();
-      const wavBuf = encodeWAV(decoded);
-      const wavBlob = new Blob([wavBuf], { type: 'audio/wav' });
+      const wavBlob = new Blob([encodeWAV(decoded)], { type: 'audio/wav' });
 
       const formData = new FormData();
       formData.append('audio', wavBlob, 'recording.wav');
       formData.append('name', name);
-      const res = await fetch('/upload', { method: 'POST', body: formData });
-
+      const res = await fetch(`/upload/${eventId}`, { method: 'POST', body: formData });
       if (!res.ok) throw new Error('アップロード失敗');
 
       const data = await res.json();
       lastRecording = { filename: data.filename, deleteToken: data.deleteToken, name };
 
-      await refreshList();
+      await refreshCount();
       recordBtn.classList.remove('recording');
       recordBtn.disabled = false;
       nameInput.value = '';
@@ -342,19 +338,13 @@ async function startRecording() {
   // カウントダウン（3→2→1）
   recordBtn.classList.add('countdown');
   setStatus('準備してください...', '');
-
   let preCount = 3;
   countdownEl.textContent = preCount;
-
   await new Promise(resolve => {
-    const preTimer = setInterval(() => {
+    const t = setInterval(() => {
       preCount--;
-      if (preCount > 0) {
-        countdownEl.textContent = preCount;
-      } else {
-        clearInterval(preTimer);
-        resolve();
-      }
+      if (preCount > 0) { countdownEl.textContent = preCount; }
+      else { clearInterval(t); resolve(); }
     }, 1000);
   });
 
@@ -364,20 +354,17 @@ async function startRecording() {
   countdownEl.textContent = '●';
   setStatus('録音中...', '');
   mediaRecorder.start();
-
   setTimeout(() => mediaRecorder.stop(), 3000);
 }
 
 // ---- 件数更新 ----
-async function refreshList() {
+async function refreshCount() {
   try {
-    const [listRes, offsetRes] = await Promise.all([fetch('/list'), fetch('/offset')]);
+    const [listRes, offsetRes] = await Promise.all([fetch(`/list/${eventId}`), fetch(`/offset/${eventId}`)]);
     const recs = await listRes.json();
     const { offset } = await offsetRes.json();
     countNum.textContent = offset + recs.length;
-  } catch (e) {
-    setStatus('サーバーに接続できません', 'error');
-  }
+  } catch {}
 }
 
 // ---- ボタン ----
@@ -391,18 +378,16 @@ okBtn.addEventListener('click', () => {
 
 retakeBtn.addEventListener('click', async () => {
   if (!lastRecording) return;
-
   try {
-    const res = await fetch(`/recording/${encodeURIComponent(lastRecording.filename)}`, {
+    const res = await fetch(`/recording/${eventId}/${encodeURIComponent(lastRecording.filename)}`, {
       method: 'DELETE',
       headers: { 'X-Delete-Token': lastRecording.deleteToken }
     });
     if (!res.ok) throw new Error('削除失敗');
-
     nameInput.value = lastRecording.name;
     lastRecording = null;
     hideRetakeArea();
-    await refreshList();
+    await refreshCount();
     setStatus('削除しました。もう一度録音してください', '');
   } catch {
     setStatus('削除に失敗しました', 'error');
@@ -414,8 +399,7 @@ function setStatus(msg, cls) {
   statusEl.className = cls || '';
 }
 
-// 起動時に一覧取得
-refreshList();
+refreshCount();
 </script>
 </body>
 </html>
