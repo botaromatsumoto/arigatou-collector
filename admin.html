@@ -14,190 +14,120 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 20px;
+      padding: 40px 20px;
     }
 
-    h1 {
-      font-size: 1.8rem;
-      color: #c0392b;
-      margin-bottom: 6px;
-      text-align: center;
-    }
-
-    .subtitle {
-      color: #888;
-      font-size: 0.9rem;
-      margin-bottom: 32px;
-      text-align: center;
-    }
+    h1 { font-size: 1.8rem; color: #c0392b; margin-bottom: 4px; text-align: center; }
+    .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 32px; text-align: center; }
 
     .card {
       background: white;
       border-radius: 24px;
-      padding: 36px 32px;
+      padding: 32px;
       width: 100%;
-      max-width: 460px;
+      max-width: 560px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
     }
 
-    .login-label {
-      font-size: 0.9rem;
-      color: #888;
-      margin-bottom: 10px;
-      text-align: center;
-      display: block;
-    }
-
-    .login-row {
-      display: flex;
-      gap: 10px;
-    }
-
+    /* ログイン */
+    .login-label { font-size: 0.9rem; color: #888; margin-bottom: 10px; text-align: center; display: block; }
+    .login-row { display: flex; gap: 10px; }
     .login-row input {
-      flex: 1;
-      padding: 12px 16px;
-      border: 2px solid #f5c6c6;
-      border-radius: 12px;
-      font-size: 1rem;
-      outline: none;
-      font-family: inherit;
-      transition: border-color 0.2s;
+      flex: 1; padding: 12px 16px; border: 2px solid #f5c6c6;
+      border-radius: 12px; font-size: 1rem; outline: none; font-family: inherit; transition: border-color 0.2s;
     }
-
     .login-row input:focus { border-color: #e74c3c; }
+    #loginError { color: #e74c3c; font-size: 0.88rem; margin-top: 8px; text-align: center; min-height: 20px; }
 
-    #loginError {
-      color: #e74c3c;
-      font-size: 0.88rem;
-      margin-top: 8px;
-      text-align: center;
-      min-height: 20px;
-    }
-
-    .count-area {
-      background: #fff9e6;
-      border-radius: 14px;
-      padding: 16px 20px;
-      margin-bottom: 24px;
-      text-align: center;
-    }
-
-    .count-label { font-size: 0.85rem; color: #888; margin-bottom: 4px; }
-    .count-number { font-size: 2.2rem; font-weight: bold; color: #e74c3c; }
-    .count-unit { font-size: 1rem; color: #c0392b; margin-left: 4px; }
-
-    .action-buttons { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
-
+    /* ボタン */
     .btn {
-      padding: 14px 20px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: bold;
-      transition: opacity 0.2s, transform 0.1s;
-      font-family: inherit;
+      padding: 12px 20px; border-radius: 12px; border: none; cursor: pointer;
+      font-size: 0.95rem; font-weight: bold; transition: opacity 0.2s, transform 0.1s; font-family: inherit;
     }
-
     .btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-login { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; white-space: nowrap; }
+    .btn-primary { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
+    .btn-blue { background: #3498db; color: white; }
+    .btn-green { background: #27ae60; color: white; }
+    .btn-gray { background: #f0f0f0; color: #555; font-size: 0.85rem; padding: 8px 14px; }
+    .btn-danger { background: #fff0f0; color: #e74c3c; border: 1px solid #f5c6c6; font-size: 0.85rem; padding: 8px 14px; }
 
-    .btn-login { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 12px 20px; border-radius: 12px; white-space: nowrap; }
-    .btn-play { background: #3498db; color: white; }
-    .btn-download { background: #27ae60; color: white; }
-    .btn-delete { background: #f8f8f8; color: #e74c3c; border: 2px solid #f5c6c6; font-size: 0.9rem; }
+    /* イベント作成 */
+    .create-section h2 { font-size: 1rem; color: #555; margin-bottom: 14px; }
+    .create-row { display: flex; gap: 10px; }
+    .create-row input {
+      flex: 1; padding: 12px 16px; border: 2px solid #f5c6c6;
+      border-radius: 12px; font-size: 1rem; outline: none; font-family: inherit; transition: border-color 0.2s;
+    }
+    .create-row input:focus { border-color: #e74c3c; }
+    #createStatus { font-size: 0.85rem; margin-top: 8px; min-height: 18px; color: #27ae60; }
 
-    .list-title { font-size: 0.85rem; color: #aaa; margin-bottom: 10px; padding-left: 2px; }
+    /* イベント一覧 */
+    .events-section h2 { font-size: 1rem; color: #555; margin-bottom: 14px; }
+    .event-list { display: flex; flex-direction: column; gap: 14px; }
+    .empty-msg { color: #ccc; font-size: 0.9rem; text-align: center; padding: 20px; }
 
-    #recordingList {
-      max-height: 240px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    .event-card {
+      border: 2px solid #f5e6e8;
+      border-radius: 16px;
+      padding: 18px 20px;
+      background: #fffafa;
+    }
+    .event-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+    .event-title { font-size: 1.05rem; font-weight: bold; color: #333; }
+    .event-count { font-size: 0.85rem; color: #888; }
+    .event-count span { font-weight: bold; color: #e74c3c; font-size: 1rem; }
+
+    .event-url-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .event-url {
+      flex: 1; padding: 8px 12px; background: #f5f5f5; border-radius: 8px;
+      font-size: 0.8rem; color: #555; word-break: break-all; border: 1px solid #eee;
     }
 
-    .list-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #f9f9f9;
-      border-radius: 10px;
-      padding: 8px 12px;
-      font-size: 0.88rem;
-      color: #555;
+    .event-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* 詳細パネル */
+    .event-detail { display: none; margin-top: 14px; border-top: 1px solid #f0e0e0; padding-top: 14px; }
+    .event-detail.open { display: block; }
+
+    .recording-list { max-height: 200px; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 5px; }
+    .rec-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #f9f9f9; border-radius: 8px; padding: 6px 10px; font-size: 0.85rem; color: #555;
     }
-
-    .list-item-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .list-num { font-weight: bold; color: #e74c3c; min-width: 24px; }
-    .list-name { font-weight: bold; color: #333; }
-    .list-time { color: #aaa; font-size: 0.8rem; }
-
-    .list-delete {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #ccc;
-      font-size: 1rem;
-      padding: 2px 6px;
-      border-radius: 6px;
-      transition: color 0.1s, background 0.1s;
-      flex-shrink: 0;
+    .rec-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .rec-num { font-weight: bold; color: #e74c3c; min-width: 22px; }
+    .rec-name { font-weight: bold; color: #333; }
+    .rec-time { color: #aaa; font-size: 0.78rem; }
+    .rec-delete {
+      background: none; border: none; cursor: pointer; color: #ccc; font-size: 0.9rem;
+      padding: 2px 6px; border-radius: 5px; transition: color 0.1s, background 0.1s; flex-shrink: 0;
     }
-    .list-delete:hover { color: #e74c3c; background: #fee; }
+    .rec-delete:hover { color: #e74c3c; background: #fee; }
 
-    .empty-msg { color: #ccc; font-size: 0.9rem; text-align: center; padding: 16px; }
-
-    .logout-link {
-      display: block;
-      text-align: center;
-      margin-top: 20px;
-      font-size: 0.85rem;
-      color: #aaa;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-
-    #adminStatus {
-      min-height: 20px;
-      font-size: 0.9rem;
-      color: #555;
-      margin-bottom: 16px;
-      text-align: center;
-    }
-    #adminStatus.success { color: #27ae60; font-weight: bold; }
-    #adminStatus.error { color: #e74c3c; }
-
-    .offset-area {
-      background: #f0f7ff;
-      border-radius: 14px;
-      padding: 16px 20px;
-      margin-bottom: 24px;
-    }
-    .offset-label { font-size: 0.85rem; color: #888; margin-bottom: 10px; }
-    .offset-row { display: flex; gap: 10px; align-items: center; }
+    .offset-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .offset-row label { font-size: 0.85rem; color: #888; white-space: nowrap; }
     .offset-row input {
-      flex: 1;
-      padding: 10px 14px;
-      border: 2px solid #b3d4f5;
-      border-radius: 10px;
-      font-size: 1.1rem;
-      font-weight: bold;
-      outline: none;
-      font-family: inherit;
-      transition: border-color 0.2s;
+      width: 90px; padding: 8px 10px; border: 2px solid #ddd;
+      border-radius: 8px; font-size: 0.95rem; font-weight: bold; outline: none; font-family: inherit;
     }
     .offset-row input:focus { border-color: #3498db; }
-    .btn-offset { background: #3498db; color: white; padding: 10px 18px; font-size: 0.95rem; }
-    #offsetStatus { font-size: 0.85rem; margin-top: 8px; min-height: 18px; color: #27ae60; }
+    .offset-status { font-size: 0.8rem; color: #27ae60; margin-top: 4px; min-height: 16px; }
+
+    .logout-link {
+      display: block; text-align: center; margin-top: 8px;
+      font-size: 0.85rem; color: #aaa; cursor: pointer; text-decoration: underline;
+    }
   </style>
 </head>
 <body>
 
-  <h1>管理者ページ</h1>
-  <p class="subtitle">ありがとうコレクター</p>
+  <h1>ありがとうコレクター</h1>
+  <p class="subtitle">管理者ページ</p>
 
+  <!-- ログインフォーム -->
   <div class="card" id="loginSection">
     <span class="login-label">パスワードを入力してください</span>
     <div class="login-row">
@@ -207,35 +137,25 @@
     <div id="loginError"></div>
   </div>
 
-  <div class="card" id="adminSection" style="display:none">
-    <div class="count-area">
-      <div class="count-label">集まった「ありがとう」</div>
-      <div>
-        <span class="count-number" id="countNum">0</span>
-        <span class="count-unit">件</span>
+  <!-- 管理パネル -->
+  <div id="adminSection" style="display:none; width:100%; max-width:560px;">
+
+    <!-- イベント作成 -->
+    <div class="card create-section">
+      <h2>新しいイベントを作成</h2>
+      <div class="create-row">
+        <input type="text" id="eventNameInput" placeholder="例：2026年卒業式" maxlength="50">
+        <button class="btn btn-primary" id="createBtn">作成</button>
       </div>
+      <div id="createStatus"></div>
     </div>
 
-    <div id="adminStatus"></div>
-
-    <div class="offset-area">
-      <div class="offset-label">今まで集まった件数（ベース件数）</div>
-      <div class="offset-row">
-        <input type="number" id="offsetInput" min="0" placeholder="0">
-        <button class="btn btn-offset" id="offsetSaveBtn">保存</button>
+    <!-- イベント一覧 -->
+    <div class="card events-section">
+      <h2>イベント一覧</h2>
+      <div class="event-list" id="eventList">
+        <div class="empty-msg">まだイベントがありません</div>
       </div>
-      <div id="offsetStatus"></div>
-    </div>
-
-    <div class="action-buttons">
-      <button class="btn btn-play" id="playAllBtn" disabled>▶ まとめて再生</button>
-      <button class="btn btn-download" id="downloadBtn" disabled>↓ WAVでダウンロード</button>
-      <button class="btn btn-delete" id="clearBtn" disabled>すべて削除</button>
-    </div>
-
-    <div class="list-title">録音一覧</div>
-    <div id="recordingList">
-      <div class="empty-msg">まだ録音がありません</div>
     </div>
 
     <span class="logout-link" id="logoutLink">ログアウト</span>
@@ -247,12 +167,6 @@ const adminSection = document.getElementById('adminSection');
 const passwordInput = document.getElementById('passwordInput');
 const loginBtn = document.getElementById('loginBtn');
 const loginError = document.getElementById('loginError');
-const countNum = document.getElementById('countNum');
-const adminStatus = document.getElementById('adminStatus');
-const playAllBtn = document.getElementById('playAllBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const clearBtn = document.getElementById('clearBtn');
-const recordingList = document.getElementById('recordingList');
 
 const savedPw = sessionStorage.getItem('adminPw');
 if (savedPw) tryLogin(savedPw, true);
@@ -267,8 +181,7 @@ async function tryLogin(pw, silent) {
       sessionStorage.setItem('adminPw', pw);
       loginSection.style.display = 'none';
       adminSection.style.display = 'block';
-      loadOffset();
-      refreshList();
+      loadEvents();
     } else {
       if (!silent) loginError.textContent = 'パスワードが違います';
     }
@@ -281,139 +194,194 @@ function getHeaders() {
   return { 'X-Admin-Password': sessionStorage.getItem('adminPw') || '' };
 }
 
-function setStatus(msg, cls) {
-  adminStatus.textContent = msg;
-  adminStatus.className = cls || '';
-}
-
-// ---- ベース件数 ----
-async function loadOffset() {
+// ---- イベント作成 ----
+document.getElementById('createBtn').addEventListener('click', async () => {
+  const name = document.getElementById('eventNameInput').value.trim();
+  if (!name) { showCreateStatus('イベント名を入力してください', 'error'); return; }
   try {
-    const res = await fetch('/offset');
-    const { offset } = await res.json();
-    document.getElementById('offsetInput').value = offset;
-  } catch {}
-}
-
-document.getElementById('offsetSaveBtn').addEventListener('click', async () => {
-  const val = parseInt(document.getElementById('offsetInput').value);
-  if (isNaN(val) || val < 0) {
-    document.getElementById('offsetStatus').textContent = '0以上の数値を入力してください';
-    document.getElementById('offsetStatus').style.color = '#e74c3c';
-    return;
-  }
-  try {
-    const res = await fetch('/admin/offset', {
+    const res = await fetch('/admin/events', {
       method: 'POST',
       headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ offset: val })
+      body: JSON.stringify({ name })
     });
     if (!res.ok) throw new Error();
-    document.getElementById('offsetStatus').textContent = `${val}件 に設定しました`;
-    document.getElementById('offsetStatus').style.color = '#27ae60';
-    setTimeout(() => { document.getElementById('offsetStatus').textContent = ''; }, 3000);
+    document.getElementById('eventNameInput').value = '';
+    showCreateStatus('イベントを作成しました', 'ok');
+    setTimeout(() => showCreateStatus('', ''), 3000);
+    loadEvents();
   } catch {
-    document.getElementById('offsetStatus').textContent = '保存に失敗しました';
-    document.getElementById('offsetStatus').style.color = '#e74c3c';
+    showCreateStatus('作成に失敗しました', 'error');
   }
 });
 
-async function refreshList() {
+function showCreateStatus(msg, type) {
+  const el = document.getElementById('createStatus');
+  el.textContent = msg;
+  el.style.color = type === 'error' ? '#e74c3c' : '#27ae60';
+}
+
+// ---- イベント一覧 ----
+async function loadEvents() {
   try {
-    const res = await fetch('/list', { headers: getHeaders() });
-    const recs = await res.json();
-    const hasRecs = recs.length > 0;
+    const res = await fetch('/admin/events', { headers: getHeaders() });
+    const events = await res.json();
+    const list = document.getElementById('eventList');
 
-    countNum.textContent = recs.length;
-    playAllBtn.disabled = !hasRecs;
-    downloadBtn.disabled = !hasRecs;
-    clearBtn.disabled = !hasRecs;
-
-    if (recs.length === 0) {
-      recordingList.innerHTML = '<div class="empty-msg">まだ録音がありません</div>';
+    if (events.length === 0) {
+      list.innerHTML = '<div class="empty-msg">まだイベントがありません</div>';
       return;
     }
 
-    recordingList.innerHTML = '';
-    recs.forEach(rec => {
-      const item = document.createElement('div');
-      item.className = 'list-item';
-      const dt = new Date(rec.timestamp);
-      const time = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
-      const nameStr = rec.name ? `<span class="list-name">${rec.name}</span>` : '<span style="color:#ccc">名前なし</span>';
-      item.innerHTML = `
-        <div class="list-item-left">
-          <span class="list-num">#${rec.index}</span>
-          ${nameStr}
-          <span class="list-time">${time}</span>
-        </div>
-        <button class="list-delete" data-filename="${rec.filename}" title="削除">✕</button>
-      `;
-      recordingList.appendChild(item);
-    });
+    list.innerHTML = '';
+    events.forEach(ev => {
+      const url = `${location.origin}/event/${ev.id}`;
+      const total = ev.offset + ev.count;
 
-    recordingList.querySelectorAll('.list-delete').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('この録音を削除しますか？')) return;
-        await fetch(`/recording/${encodeURIComponent(btn.dataset.filename)}`, { method: 'DELETE', headers: getHeaders() });
-        await refreshList();
+      const div = document.createElement('div');
+      div.className = 'event-card';
+      div.innerHTML = `
+        <div class="event-header">
+          <span class="event-title">${escHtml(ev.name)}</span>
+          <span class="event-count">合計 <span>${total}</span> 件（録音 ${ev.count} 件）</span>
+        </div>
+        <div class="event-url-row">
+          <div class="event-url">${url}</div>
+          <button class="btn btn-gray copy-btn" data-url="${url}">コピー</button>
+        </div>
+        <div class="event-actions">
+          <button class="btn btn-gray detail-btn">録音を管理</button>
+          <button class="btn btn-green download-btn" data-id="${ev.id}" ${ev.count === 0 ? 'disabled' : ''}>↓ WAVダウンロード</button>
+          <button class="btn btn-danger delete-event-btn" data-id="${ev.id}" data-name="${escHtml(ev.name)}">イベント削除</button>
+        </div>
+        <div class="event-detail" id="detail-${ev.id}">
+          <div class="recording-list" id="reclist-${ev.id}"></div>
+          <div class="event-actions">
+            <button class="btn btn-danger clear-btn" data-id="${ev.id}" ${ev.count === 0 ? 'disabled' : ''}>録音をすべて削除</button>
+          </div>
+          <div class="offset-row">
+            <label>ベース件数：</label>
+            <input type="number" min="0" value="${ev.offset}" class="offset-input" data-id="${ev.id}">
+            <button class="btn btn-gray offset-save-btn" data-id="${ev.id}">保存</button>
+          </div>
+          <div class="offset-status" id="offset-status-${ev.id}"></div>
+        </div>
+      `;
+      list.appendChild(div);
+
+      // コピー
+      div.querySelector('.copy-btn').addEventListener('click', function() {
+        navigator.clipboard.writeText(this.dataset.url).then(() => {
+          this.textContent = 'コピー済み';
+          setTimeout(() => { this.textContent = 'コピー'; }, 2000);
+        });
+      });
+
+      // 録音を管理（トグル）
+      div.querySelector('.detail-btn').addEventListener('click', function() {
+        const detail = document.getElementById(`detail-${ev.id}`);
+        const isOpen = detail.classList.toggle('open');
+        this.textContent = isOpen ? '閉じる' : '録音を管理';
+        if (isOpen) loadRecordings(ev.id);
+      });
+
+      // WAVダウンロード
+      div.querySelector('.download-btn').addEventListener('click', async function() {
+        this.disabled = true;
+        this.textContent = 'ダウンロード中...';
+        try {
+          const res = await fetch(`/download/${ev.id}`, { headers: getHeaders() });
+          if (!res.ok) throw new Error();
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `arigatou_${ev.id}_${new Date().toISOString().slice(0,10)}.wav`;
+          document.body.appendChild(a); a.click();
+          setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+        } catch { alert('ダウンロードに失敗しました'); }
+        this.disabled = false;
+        this.textContent = '↓ WAVダウンロード';
+      });
+
+      // 録音全削除
+      div.querySelector('.clear-btn').addEventListener('click', async function() {
+        if (!confirm(`「${ev.name}」の録音をすべて削除しますか？`)) return;
+        await fetch(`/clear/${ev.id}`, { method: 'DELETE', headers: getHeaders() });
+        loadEvents();
+      });
+
+      // イベント削除
+      div.querySelector('.delete-event-btn').addEventListener('click', async function() {
+        if (!confirm(`「${this.dataset.name}」を削除しますか？\n録音データもすべて削除されます。`)) return;
+        await fetch(`/admin/events/${this.dataset.id}`, { method: 'DELETE', headers: getHeaders() });
+        loadEvents();
+      });
+
+      // ベース件数保存
+      div.querySelector('.offset-save-btn').addEventListener('click', async function() {
+        const id = this.dataset.id;
+        const n = parseInt(div.querySelector(`.offset-input[data-id="${id}"]`).value);
+        if (isNaN(n) || n < 0) { showOffsetStatus(id, '0以上の数値を入力してください', 'error'); return; }
+        try {
+          const res = await fetch(`/admin/offset/${id}`, {
+            method: 'POST',
+            headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ offset: n })
+          });
+          if (!res.ok) throw new Error();
+          showOffsetStatus(id, `${n}件 に設定しました`, 'ok');
+          setTimeout(() => showOffsetStatus(id, '', ''), 3000);
+          loadEvents();
+        } catch { showOffsetStatus(id, '保存に失敗しました', 'error'); }
       });
     });
   } catch {
-    setStatus('サーバーに接続できません', 'error');
+    document.getElementById('eventList').innerHTML = '<div class="empty-msg">読み込みに失敗しました</div>';
   }
 }
 
-playAllBtn.addEventListener('click', async () => {
-  setStatus('再生中...', 'success');
-  playAllBtn.disabled = true;
-  try {
-    const res = await fetch('/download', { headers: getHeaders() });
-    if (!res.ok) throw new Error('取得失敗');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audio.play();
-    audio.onended = () => {
-      URL.revokeObjectURL(url);
-      setStatus('再生完了', 'success');
-      setTimeout(() => setStatus('', ''), 2000);
-    };
-  } catch {
-    setStatus('再生に失敗しました', 'error');
-  }
-  playAllBtn.disabled = false;
-});
+function showOffsetStatus(id, msg, type) {
+  const el = document.getElementById(`offset-status-${id}`);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = type === 'error' ? '#e74c3c' : '#27ae60';
+}
 
-downloadBtn.addEventListener('click', async () => {
-  setStatus('ダウンロード中...', '');
-  downloadBtn.disabled = true;
+async function loadRecordings(eventId) {
+  const container = document.getElementById(`reclist-${eventId}`);
   try {
-    const res = await fetch('/download', { headers: getHeaders() });
-    if (!res.ok) throw new Error('取得失敗');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `arigatou_${new Date().toISOString().slice(0,10)}.wav`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
-    setStatus('ダウンロードしました！', 'success');
-    setTimeout(() => setStatus('', ''), 2500);
-  } catch {
-    setStatus('ダウンロードに失敗しました', 'error');
-  }
-  downloadBtn.disabled = false;
-});
+    const res = await fetch(`/list/${eventId}`, { headers: getHeaders() });
+    const recs = await res.json();
+    if (recs.length === 0) { container.innerHTML = '<div class="empty-msg">まだ録音がありません</div>'; return; }
+    container.innerHTML = '';
+    recs.forEach(rec => {
+      const item = document.createElement('div');
+      item.className = 'rec-item';
+      const dt = new Date(rec.timestamp);
+      const time = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
+      const nameStr = rec.name ? `<span class="rec-name">${escHtml(rec.name)}</span>` : '<span style="color:#ccc">名前なし</span>';
+      item.innerHTML = `
+        <div class="rec-left">
+          <span class="rec-num">#${rec.index}</span>
+          ${nameStr}
+          <span class="rec-time">${time}</span>
+        </div>
+        <button class="rec-delete" data-filename="${rec.filename}" title="削除">✕</button>
+      `;
+      container.appendChild(item);
+      item.querySelector('.rec-delete').addEventListener('click', async function() {
+        if (!confirm('この録音を削除しますか？')) return;
+        await fetch(`/recording/${eventId}/${encodeURIComponent(this.dataset.filename)}`, { method: 'DELETE', headers: getHeaders() });
+        loadRecordings(eventId);
+        loadEvents();
+      });
+    });
+  } catch { container.innerHTML = '<div class="empty-msg">読み込みに失敗しました</div>'; }
+}
 
-clearBtn.addEventListener('click', async () => {
-  const count = parseInt(countNum.textContent);
-  if (!confirm(`${count}件の録音をすべて削除しますか？`)) return;
-  await fetch('/clear', { method: 'DELETE', headers: getHeaders() });
-  await refreshList();
-  setStatus('すべて削除しました', '');
-});
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 document.getElementById('logoutLink').addEventListener('click', () => {
   sessionStorage.removeItem('adminPw');
