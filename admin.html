@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ありがとうコレクター 管理</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+      background: linear-gradient(135deg, #fff9e6 0%, #ffe8f0 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      color: #c0392b;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+
+    /* ログイン */
+    .login-label {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 10px;
+      text-align: center;
+      display: block;
+    }
+
+    .login-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .login-row input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #f5c6c6;
+      border-radius: 12px;
+      font-size: 1rem;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    .login-row input:focus { border-color: #e74c3c; }
+
+    #loginError {
+      color: #e74c3c;
+      font-size: 0.88rem;
+      margin-top: 8px;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    /* 管理パネル */
+    .count-area {
+      background: #fff9e6;
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .count-label { font-size: 0.85rem; color: #888; margin-bottom: 4px; }
+    .count-number { font-size: 2.2rem; font-weight: bold; color: #e74c3c; }
+    .count-unit { font-size: 1rem; color: #c0392b; margin-left: 4px; }
+
+    .action-buttons { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
+
+    .btn {
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: bold;
+      transition: opacity 0.2s, transform 0.1s;
+      font-family: inherit;
+    }
+
+    .btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-login { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 12px 20px; border-radius: 12px; white-space: nowrap; }
+    .btn-play { background: #3498db; color: white; }
+    .btn-download { background: #27ae60; color: white; }
+    .btn-delete { background: #f8f8f8; color: #e74c3c; border: 2px solid #f5c6c6; font-size: 0.9rem; }
+
+    .list-title { font-size: 0.85rem; color: #aaa; margin-bottom: 10px; padding-left: 2px; }
+
+    #recordingList {
+      max-height: 240px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f9f9f9;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.88rem;
+      color: #555;
+    }
+
+    .list-item-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .list-num { font-weight: bold; color: #e74c3c; min-width: 24px; }
+    .list-name { font-weight: bold; color: #333; }
+    .list-time { color: #aaa; font-size: 0.8rem; }
+
+    .list-delete {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #ccc;
+      font-size: 1rem;
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: color 0.1s, background 0.1s;
+      flex-shrink: 0;
+    }
+    .list-delete:hover { color: #e74c3c; background: #fee; }
+
+    .empty-msg { color: #ccc; font-size: 0.9rem; text-align: center; padding: 16px; }
+
+    .logout-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.85rem;
+      color: #aaa;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    #adminStatus {
+      min-height: 20px;
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    #adminStatus.success { color: #27ae60; font-weight: bold; }
+    #adminStatus.error { color: #e74c3c; }
+  </style>
+</head>
+<body>
+
+  <h1>管理者ページ</h1>
+  <p class="subtitle">ありがとうコレクター</p>
+
+  <!-- ログインフォーム -->
+  <div class="card" id="loginSection">
+    <span class="login-label">パスワードを入力してください</span>
+    <div class="login-row">
+      <input type="password" id="passwordInput" placeholder="パスワード">
+      <button class="btn btn-login" id="loginBtn">ログイン</button>
+    </div>
+    <div id="loginError"></div>
+  </div>
+
+  <!-- 管理パネル（ログイン後に表示） -->
+  <div class="card" id="adminSection" style="display:none">
+    <div class="count-area">
+      <div class="count-label">集まった「ありがとう」</div>
+      <div>
+        <span class="count-number" id="countNum">0</span>
+        <span class="count-unit">件</span>
+      </div>
+    </div>
+
+    <div id="adminStatus"></div>
+
+    <div class="action-buttons">
+      <button class="btn btn-play" id="playAllBtn" disabled>▶ まとめて再生</button>
+      <button class="btn btn-download" id="downloadBtn" disabled>↓ WAVでダウンロード</button>
+      <button class="btn btn-delete" id="clearBtn" disabled>すべて削除</button>
+    </div>
+
+    <div class="list-title">録音一覧</div>
+    <div id="recordingList">
+      <div class="empty-msg">まだ録音がありません</div>
+    </div>
+
+    <span class="logout-link" id="logoutLink">ログアウト</span>
+  </div>
+
+<script>
+const loginSection = document.getElementById('loginSection');
+const adminSection = document.getElementById('adminSection');
+const passwordInput = document.getElementById('passwordInput');
+const loginBtn = document.getElementById('loginBtn');
+const loginError = document.getElementById('loginError');
+const countNum = document.getElementById('countNum');
+const adminStatus = document.getElementById('adminStatus');
+const playAllBtn = document.getElementById('playAllBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const clearBtn = document.getElementById('clearBtn');
+const recordingList = document.getElementById('recordingList');
+
+// セッション復元
+const savedPw = sessionStorage.getItem('adminPw');
+if (savedPw) tryLogin(savedPw, true);
+
+loginBtn.addEventListener('click', () => tryLogin(passwordInput.value, false));
+passwordInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(passwordInput.value, false); });
+
+async function tryLogin(pw, silent) {
+  try {
+    const res = await fetch('/admin/verify', { headers: { 'X-Admin-Password': pw } });
+    if (res.ok) {
+      sessionStorage.setItem('adminPw', pw);
+      loginSection.style.display = 'none';
+      adminSection.style.display = 'block';
+      refreshList();
+    } else {
+      if (!silent) loginError.textContent = 'パスワードが違います';
+    }
+  } catch {
+    if (!silent) loginError.textContent = 'サーバーに接続できません';
+  }
+}
+
+function getHeaders() {
+  return { 'X-Admin-Password': sessionStorage.getItem('adminPw') || '' };
+}
+
+function setStatus(msg, cls) {
+  adminStatus.textContent = msg;
+  adminStatus.className = cls || '';
+}
+
+async function refreshList() {
+  try {
+    const res = await fetch('/list', { headers: getHeaders() });
+    const recs = await res.json();
+    const hasRecs = recs.length > 0;
+
+    countNum.textContent = recs.length;
+    playAllBtn.disabled = !hasRecs;
+    downloadBtn.disabled = !hasRecs;
+    clearBtn.disabled = !hasRecs;
+
+    if (recs.length === 0) {
+      recordingList.innerHTML = '<div class="empty-msg">まだ録音がありません</div>';
+      return;
+    }
+
+    recordingList.innerHTML = '';
+    recs.forEach(rec => {
+      const item = document.createElement('div');
+      item.className = 'list-item';
+      const dt = new Date(rec.timestamp);
+      const time = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
+      const nameStr = rec.name ? `<span class="list-name">${rec.name}</span>` : '<span style="color:#ccc">名前なし</span>';
+      item.innerHTML = `
+        <div class="list-item-left">
+          <span class="list-num">#${rec.index}</span>
+          ${nameStr}
+          <span class="list-time">${time}</span>
+        </div>
+        <button class="list-delete" data-filename="${rec.filename}" title="削除">✕</button>
+      `;
+      recordingList.appendChild(item);
+    });
+
+    recordingList.querySelectorAll('.list-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('この録音を削除しますか？')) return;
+        await fetch(`/recording/${encodeURIComponent(btn.dataset.filename)}`, { method: 'DELETE', headers: getHeaders() });
+        await refreshList();
+      });
+    });
+  } catch {
+    setStatus('サーバーに接続できません', 'error');
+  }
+}
+
+playAllBtn.addEventListener('click', async () => {
+  setStatus('再生中...', 'success');
+  playAllBtn.disabled = true;
+  try {
+    const res = await fetch('/download', { headers: getHeaders() });
+    if (!res.ok) throw new Error('取得失敗');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.play();
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      setStatus('再生完了', 'success');
+      setTimeout(() => setStatus('', ''), 2000);
+    };
+  } catch {
+    setStatus('再生に失敗しました', 'error');
+  }
+  playAllBtn.disabled = false;
+});
+
+downloadBtn.addEventListener('click', async () => {
+  setStatus('ダウンロード中...', '');
+  downloadBtn.disabled = true;
+  try {
+    const res = await fetch('/download', { headers: getHeaders() });
+    if (!res.ok) throw new Error('取得失敗');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `arigatou_${new Date().toISOString().slice(0,10)}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+    setStatus('ダウンロードしました！', 'success');
+    setTimeout(() => setStatus('', ''), 2500);
+  } catch {
+    setStatus('ダウンロードに失敗しました', 'error');
+  }
+  downloadBtn.disabled = false;
+});
+
+clearBtn.addEventListener('click', async () => {
+  const count = parseInt(countNum.textContent);
+  if (!confirm(`${count}件の録音をすべて削除しますか？`)) return;
+  await fetch('/clear', { method: 'DELETE', headers: getHeaders() });
+  await refreshList();
+  setStatus('すべて削除しました', '');
+});
+
+document.getElementById('logoutLink').addEventListener('click', () => {
+  sessionStorage.removeItem('adminPw');
+  adminSection.style.display = 'none';
+  loginSection.style.display = 'block';
+  passwordInput.value = '';
+  loginError.textContent = '';
+});
+</script>
+</body>
+</html>
