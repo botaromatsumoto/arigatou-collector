@@ -6,12 +6,21 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'arigatou2024';
+
+function adminAuth(req, res, next) {
+  const pw = req.headers['x-admin-password'];
+  if (pw !== ADMIN_PASSWORD) return res.status(401).json({ error: '認証失敗' });
+  next();
+}
 
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/admin/verify', adminAuth, (req, res) => res.json({ ok: true }));
 
 // 音声ファイルの保存設定
 const storage = multer.diskStorage({
@@ -26,9 +35,10 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 app.post('/upload', upload.single('audio'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'ファイルがありません' });
   const name = (req.body.name || '').trim().slice(0, 30);
+  const deleteToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
   const jsonPath = path.join(UPLOADS_DIR, req.file.filename.replace('.wav', '.json'));
-  fs.writeFileSync(jsonPath, JSON.stringify({ name }));
-  res.json({ success: true });
+  fs.writeFileSync(jsonPath, JSON.stringify({ name, deleteToken }));
+  res.json({ success: true, filename: req.file.filename, deleteToken });
 });
 
 // 録音一覧取得
@@ -49,7 +59,7 @@ app.get('/list', (req, res) => {
 });
 
 // 全録音を結合してダウンロード
-app.get('/download', (req, res) => {
+app.get('/download', adminAuth, (req, res) => {
   const files = fs.readdirSync(UPLOADS_DIR)
     .filter(f => f.endsWith('.wav'))
     .sort()
@@ -96,22 +106,34 @@ app.get('/download', (req, res) => {
   }
 });
 
-// 個別削除
+// 個別削除（管理者パスワード または 削除トークンで認証）
 app.delete('/recording/:filename', (req, res) => {
   const safe = path.basename(req.params.filename);
   const filepath = path.join(UPLOADS_DIR, safe);
-  if (fs.existsSync(filepath)) {
-    fs.unlinkSync(filepath);
-    const jsonPath = filepath.replace('.wav', '.json');
-    if (fs.existsSync(jsonPath)) fs.unlinkSync(jsonPath);
-    res.json({ success: true });
-  } else {
-    res.status(404).json({ error: 'Not found' });
+  if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'Not found' });
+
+  const adminPw = req.headers['x-admin-password'];
+  const deleteToken = req.headers['x-delete-token'];
+  let authorized = adminPw === ADMIN_PASSWORD;
+
+  if (!authorized && deleteToken) {
+    try {
+      const jsonPath = filepath.replace('.wav', '.json');
+      const meta = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+      authorized = meta.deleteToken && meta.deleteToken === deleteToken;
+    } catch {}
   }
+
+  if (!authorized) return res.status(401).json({ error: '認証失敗' });
+
+  fs.unlinkSync(filepath);
+  const jsonPath = filepath.replace('.wav', '.json');
+  if (fs.existsSync(jsonPath)) fs.unlinkSync(jsonPath);
+  res.json({ success: true });
 });
 
 // 全削除
-app.delete('/clear', (req, res) => {
+app.delete('/clear', adminAuth, (req, res) => {
   fs.readdirSync(UPLOADS_DIR)
     .filter(f => f.endsWith('.wav') || f.endsWith('.json'))
     .forEach(f => fs.unlinkSync(path.join(UPLOADS_DIR, f)));
