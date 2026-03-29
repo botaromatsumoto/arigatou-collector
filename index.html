@@ -371,9 +371,10 @@ async function startRecording() {
 // ---- 件数更新 ----
 async function refreshList() {
   try {
-    const res = await fetch('/list');
-    const recs = await res.json();
-    countNum.textContent = recs.length;
+    const [listRes, offsetRes] = await Promise.all([fetch('/list'), fetch('/offset')]);
+    const recs = await listRes.json();
+    const { offset } = await offsetRes.json();
+    countNum.textContent = offset + recs.length;
   } catch (e) {
     setStatus('サーバーに接続できません', 'error');
   }
