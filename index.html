@@ -171,6 +171,33 @@
     .list-delete:hover { color: #e74c3c; background: #fee; }
 
     .empty-msg { color: #ccc; font-size: 0.9rem; text-align: center; padding: 16px; }
+
+    .name-input-area {
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    .name-input-area label {
+      display: block;
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 6px;
+    }
+    .name-input-area input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #f5c6c6;
+      border-radius: 12px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .name-input-area input:focus {
+      border-color: #e74c3c;
+    }
+
+    .list-name { font-weight: bold; color: #333; }
+    .list-time { color: #aaa; font-size: 0.8rem; }
   </style>
 </head>
 <body>
@@ -179,9 +206,14 @@
   <p class="subtitle">みんなの「ありがとう」を集めてひとつの音声にします</p>
 
   <div class="card">
+    <div class="name-input-area">
+      <label for="nameInput">お名前を入力してください</label>
+      <input type="text" id="nameInput" placeholder="例：田中 太郎" maxlength="30">
+    </div>
+
     <button id="recordBtn" title="タップして録音">
       <span class="mic-icon">🎤</span>
-      <span class="btn-label">タップして<br>録音（2秒）</span>
+      <span class="btn-label">タップして<br>録音（3秒）</span>
       <span id="countdown">3</span>
     </button>
 
@@ -218,6 +250,7 @@ const playAllBtn = document.getElementById('playAllBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const clearBtn = document.getElementById('clearBtn');
 const recordingList = document.getElementById('recordingList');
+const nameInput = document.getElementById('nameInput');
 
 // ---- 録音 ----
 function getSupportedMimeType() {
@@ -271,6 +304,13 @@ function encodeWAV(audioBuffer) {
 }
 
 async function startRecording() {
+  const name = nameInput.value.trim();
+  if (!name) {
+    setStatus('お名前を入力してください', 'error');
+    nameInput.focus();
+    return;
+  }
+
   recordBtn.disabled = true;
   setStatus('マイクの許可を確認中...', '');
 
@@ -306,6 +346,7 @@ async function startRecording() {
       // サーバーへアップロード
       const formData = new FormData();
       formData.append('audio', wavBlob, 'recording.wav');
+      formData.append('name', name);
       const res = await fetch('/upload', { method: 'POST', body: formData });
 
       if (!res.ok) throw new Error('アップロード失敗');
@@ -313,6 +354,7 @@ async function startRecording() {
       await refreshList();
       recordBtn.classList.remove('recording');
       recordBtn.disabled = false;
+      nameInput.value = '';
       setStatus('録音を保存しました！', 'success');
       setTimeout(() => setStatus('ボタンを押してください', ''), 2500);
     } catch (e) {
@@ -348,7 +390,7 @@ async function startRecording() {
   setStatus('録音中...', '');
   mediaRecorder.start();
 
-  setTimeout(() => mediaRecorder.stop(), 2000);
+  setTimeout(() => mediaRecorder.stop(), 3000);
 }
 
 // ---- 一覧更新 ----
@@ -373,11 +415,13 @@ async function refreshList() {
       const item = document.createElement('div');
       item.className = 'list-item';
       const dt = new Date(rec.timestamp);
-      const label = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
+      const time = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
+      const nameStr = rec.name ? `<span class="list-name">${rec.name}</span>` : '<span style="color:#ccc">名前なし</span>';
       item.innerHTML = `
         <div class="list-item-left">
           <span class="list-num">#${rec.index}</span>
-          <span>${label}</span>
+          ${nameStr}
+          <span class="list-time">${time}</span>
         </div>
         <button class="list-delete" data-filename="${rec.filename}" title="削除">✕</button>
       `;
