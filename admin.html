@@ -41,7 +41,6 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.1);
     }
 
-    /* ログイン */
     .login-label {
       font-size: 0.9rem;
       color: #888;
@@ -76,7 +75,6 @@
       min-height: 20px;
     }
 
-    /* 管理パネル */
     .count-area {
       background: #fff9e6;
       border-radius: 14px;
@@ -177,7 +175,6 @@
   <h1>管理者ページ</h1>
   <p class="subtitle">ありがとうコレクター</p>
 
-  <!-- ログインフォーム -->
   <div class="card" id="loginSection">
     <span class="login-label">パスワードを入力してください</span>
     <div class="login-row">
@@ -187,7 +184,6 @@
     <div id="loginError"></div>
   </div>
 
-  <!-- 管理パネル（ログイン後に表示） -->
   <div class="card" id="adminSection" style="display:none">
     <div class="count-area">
       <div class="count-label">集まった「ありがとう」</div>
@@ -226,7 +222,6 @@ const downloadBtn = document.getElementById('downloadBtn');
 const clearBtn = document.getElementById('clearBtn');
 const recordingList = document.getElementById('recordingList');
 
-// セッション復元
 const savedPw = sessionStorage.getItem('adminPw');
 if (savedPw) tryLogin(savedPw, true);
 
