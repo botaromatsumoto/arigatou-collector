@@ -168,6 +168,29 @@
     }
     #adminStatus.success { color: #27ae60; font-weight: bold; }
     #adminStatus.error { color: #e74c3c; }
+
+    .offset-area {
+      background: #f0f7ff;
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .offset-label { font-size: 0.85rem; color: #888; margin-bottom: 10px; }
+    .offset-row { display: flex; gap: 10px; align-items: center; }
+    .offset-row input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 2px solid #b3d4f5;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .offset-row input:focus { border-color: #3498db; }
+    .btn-offset { background: #3498db; color: white; padding: 10px 18px; font-size: 0.95rem; }
+    #offsetStatus { font-size: 0.85rem; margin-top: 8px; min-height: 18px; color: #27ae60; }
   </style>
 </head>
 <body>
@@ -194,6 +217,15 @@
     </div>
 
     <div id="adminStatus"></div>
+
+    <div class="offset-area">
+      <div class="offset-label">今まで集まった件数（ベース件数）</div>
+      <div class="offset-row">
+        <input type="number" id="offsetInput" min="0" placeholder="0">
+        <button class="btn btn-offset" id="offsetSaveBtn">保存</button>
+      </div>
+      <div id="offsetStatus"></div>
+    </div>
 
     <div class="action-buttons">
       <button class="btn btn-play" id="playAllBtn" disabled>▶ まとめて再生</button>
@@ -235,6 +267,7 @@ async function tryLogin(pw, silent) {
       sessionStorage.setItem('adminPw', pw);
       loginSection.style.display = 'none';
       adminSection.style.display = 'block';
+      loadOffset();
       refreshList();
     } else {
       if (!silent) loginError.textContent = 'パスワードが違います';
@@ -252,6 +285,38 @@ function setStatus(msg, cls) {
   adminStatus.textContent = msg;
   adminStatus.className = cls || '';
 }
+
+// ---- ベース件数 ----
+async function loadOffset() {
+  try {
+    const res = await fetch('/offset');
+    const { offset } = await res.json();
+    document.getElementById('offsetInput').value = offset;
+  } catch {}
+}
+
+document.getElementById('offsetSaveBtn').addEventListener('click', async () => {
+  const val = parseInt(document.getElementById('offsetInput').value);
+  if (isNaN(val) || val < 0) {
+    document.getElementById('offsetStatus').textContent = '0以上の数値を入力してください';
+    document.getElementById('offsetStatus').style.color = '#e74c3c';
+    return;
+  }
+  try {
+    const res = await fetch('/admin/offset', {
+      method: 'POST',
+      headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ offset: val })
+    });
+    if (!res.ok) throw new Error();
+    document.getElementById('offsetStatus').textContent = `${val}件 に設定しました`;
+    document.getElementById('offsetStatus').style.color = '#27ae60';
+    setTimeout(() => { document.getElementById('offsetStatus').textContent = ''; }, 3000);
+  } catch {
+    document.getElementById('offsetStatus').textContent = '保存に失敗しました';
+    document.getElementById('offsetStatus').style.color = '#e74c3c';
+  }
+});
 
 async function refreshList() {
   try {
