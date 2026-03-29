@@ -198,6 +198,23 @@
 
     .list-name { font-weight: bold; color: #333; }
     .list-time { color: #aaa; font-size: 0.8rem; }
+
+    #retakeBtn {
+      display: none;
+      width: 100%;
+      margin-top: 12px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: 2px solid #f5c6c6;
+      background: #fff8f8;
+      color: #e74c3c;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    #retakeBtn:hover { background: #fee; }
   </style>
 </head>
 <body>
@@ -226,19 +243,7 @@
     </div>
 
     <div id="status">ボタンを押してください</div>
-
-    <div class="action-buttons">
-      <button class="btn btn-play" id="playAllBtn" disabled>▶ まとめて再生</button>
-      <button class="btn btn-download" id="downloadBtn" disabled>↓ WAVでダウンロード</button>
-      <button class="btn btn-delete" id="clearBtn" disabled>すべて削除</button>
-    </div>
-
-    <div class="list-section">
-      <div class="list-title">録音一覧</div>
-      <div id="recordingList">
-        <div class="empty-msg">まだ録音がありません</div>
-      </div>
-    </div>
+    <button id="retakeBtn">やり直す</button>
   </div>
 
 <script>
@@ -246,11 +251,10 @@ const recordBtn = document.getElementById('recordBtn');
 const countdownEl = document.getElementById('countdown');
 const countNum = document.getElementById('countNum');
 const statusEl = document.getElementById('status');
-const playAllBtn = document.getElementById('playAllBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const clearBtn = document.getElementById('clearBtn');
-const recordingList = document.getElementById('recordingList');
 const nameInput = document.getElementById('nameInput');
+const retakeBtn = document.getElementById('retakeBtn');
+
+let lastRecording = null; // { filename, deleteToken, name }
 
 // ---- 録音 ----
 function getSupportedMimeType() {
@@ -311,6 +315,8 @@ async function startRecording() {
     return;
   }
 
+  lastRecording = null;
+  retakeBtn.style.display = 'none';
   recordBtn.disabled = true;
   setStatus('マイクの許可を確認中...', '');
 
@@ -351,11 +357,15 @@ async function startRecording() {
 
       if (!res.ok) throw new Error('アップロード失敗');
 
+      const data = await res.json();
+      lastRecording = { filename: data.filename, deleteToken: data.deleteToken, name };
+
       await refreshList();
       recordBtn.classList.remove('recording');
       recordBtn.disabled = false;
       nameInput.value = '';
       setStatus('録音を保存しました！', 'success');
+      retakeBtn.style.display = 'block';
       setTimeout(() => setStatus('ボタンを押してください', ''), 2500);
     } catch (e) {
       setStatus('エラー: ' + e.message, 'error');
@@ -393,48 +403,12 @@ async function startRecording() {
   setTimeout(() => mediaRecorder.stop(), 3000);
 }
 
-// ---- 一覧更新 ----
+// ---- 件数更新 ----
 async function refreshList() {
   try {
     const res = await fetch('/list');
     const recs = await res.json();
-    const hasRecs = recs.length > 0;
-
     countNum.textContent = recs.length;
-    playAllBtn.disabled = !hasRecs;
-    downloadBtn.disabled = !hasRecs;
-    clearBtn.disabled = !hasRecs;
-
-    if (recs.length === 0) {
-      recordingList.innerHTML = '<div class="empty-msg">まだ録音がありません</div>';
-      return;
-    }
-
-    recordingList.innerHTML = '';
-    recs.forEach(rec => {
-      const item = document.createElement('div');
-      item.className = 'list-item';
-      const dt = new Date(rec.timestamp);
-      const time = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
-      const nameStr = rec.name ? `<span class="list-name">${rec.name}</span>` : '<span style="color:#ccc">名前なし</span>';
-      item.innerHTML = `
-        <div class="list-item-left">
-          <span class="list-num">#${rec.index}</span>
-          ${nameStr}
-          <span class="list-time">${time}</span>
-        </div>
-        <button class="list-delete" data-filename="${rec.filename}" title="削除">✕</button>
-      `;
-      recordingList.appendChild(item);
-    });
-
-    recordingList.querySelectorAll('.list-delete').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('この録音を削除しますか？')) return;
-        await fetch(`/recording/${encodeURIComponent(btn.dataset.filename)}`, { method: 'DELETE' });
-        await refreshList();
-      });
-    });
   } catch (e) {
     setStatus('サーバーに接続できません', 'error');
   }
@@ -443,55 +417,25 @@ async function refreshList() {
 // ---- ボタン ----
 recordBtn.addEventListener('click', startRecording);
 
-playAllBtn.addEventListener('click', async () => {
-  setStatus('再生中...', 'success');
-  playAllBtn.disabled = true;
-  try {
-    const res = await fetch('/download');
-    if (!res.ok) throw new Error('取得失敗');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audio.play();
-    audio.onended = () => {
-      URL.revokeObjectURL(url);
-      setStatus('再生完了', 'success');
-      setTimeout(() => setStatus('ボタンを押してください', ''), 2000);
-    };
-  } catch (e) {
-    setStatus('再生に失敗しました', 'error');
-  }
-  playAllBtn.disabled = false;
-});
+retakeBtn.addEventListener('click', async () => {
+  if (!lastRecording) return;
+  if (!confirm('直前の録音を削除して、やり直しますか？')) return;
 
-downloadBtn.addEventListener('click', async () => {
-  setStatus('ダウンロード中...', '');
-  downloadBtn.disabled = true;
   try {
-    const res = await fetch('/download');
-    if (!res.ok) throw new Error('取得失敗');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `arigatou_${new Date().toISOString().slice(0,10)}.wav`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
-    setStatus('ダウンロードしました！', 'success');
-    setTimeout(() => setStatus('ボタンを押してください', ''), 2500);
-  } catch (e) {
-    setStatus('ダウンロードに失敗しました', 'error');
-  }
-  downloadBtn.disabled = false;
-});
+    const res = await fetch(`/recording/${encodeURIComponent(lastRecording.filename)}`, {
+      method: 'DELETE',
+      headers: { 'X-Delete-Token': lastRecording.deleteToken }
+    });
+    if (!res.ok) throw new Error('削除失敗');
 
-clearBtn.addEventListener('click', async () => {
-  const count = parseInt(countNum.textContent);
-  if (!confirm(`${count}件の録音をすべて削除しますか？`)) return;
-  await fetch('/clear', { method: 'DELETE' });
-  await refreshList();
-  setStatus('すべて削除しました', '');
+    nameInput.value = lastRecording.name;
+    lastRecording = null;
+    retakeBtn.style.display = 'none';
+    await refreshList();
+    setStatus('削除しました。もう一度録音してください', '');
+  } catch {
+    setStatus('削除に失敗しました', 'error');
+  }
 });
 
 function setStatus(msg, cls) {
