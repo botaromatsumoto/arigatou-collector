@@ -4,9 +4,18 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
+app.use(express.json());
 const PORT = process.env.PORT || 3000;
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'arigatou2024';
+const OFFSET_FILE = path.join(UPLOADS_DIR, '_offset.json');
+
+function getOffset() {
+  try { return JSON.parse(fs.readFileSync(OFFSET_FILE, 'utf8')).offset || 0; } catch { return 0; }
+}
+function setOffset(n) {
+  fs.writeFileSync(OFFSET_FILE, JSON.stringify({ offset: n }));
+}
 
 function adminAuth(req, res, next) {
   const pw = req.headers['x-admin-password'];
@@ -21,6 +30,15 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/admin/verify', adminAuth, (req, res) => res.json({ ok: true }));
+
+// ベース件数の取得（公開）・設定（管理者のみ）
+app.get('/offset', (req, res) => res.json({ offset: getOffset() }));
+app.post('/admin/offset', adminAuth, (req, res) => {
+  const n = parseInt(req.body.offset);
+  if (isNaN(n) || n < 0) return res.status(400).json({ error: '無効な値です' });
+  setOffset(n);
+  res.json({ success: true, offset: n });
+});
 
 // 音声ファイルの保存設定
 const storage = multer.diskStorage({
@@ -132,10 +150,10 @@ app.delete('/recording/:filename', (req, res) => {
   res.json({ success: true });
 });
 
-// 全削除
+// 全削除（ベース件数ファイルは保持）
 app.delete('/clear', adminAuth, (req, res) => {
   fs.readdirSync(UPLOADS_DIR)
-    .filter(f => f.endsWith('.wav') || f.endsWith('.json'))
+    .filter(f => (f.endsWith('.wav') || f.endsWith('.json')) && f !== '_offset.json')
     .forEach(f => fs.unlinkSync(path.join(UPLOADS_DIR, f)));
   res.json({ success: true });
 });
