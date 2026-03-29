@@ -5,7 +5,7 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -25,6 +25,9 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 // 録音アップロード
 app.post('/upload', upload.single('audio'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'ファイルがありません' });
+  const name = (req.body.name || '').trim().slice(0, 30);
+  const jsonPath = path.join(UPLOADS_DIR, req.file.filename.replace('.wav', '.json'));
+  fs.writeFileSync(jsonPath, JSON.stringify({ name }));
   res.json({ success: true });
 });
 
@@ -33,11 +36,16 @@ app.get('/list', (req, res) => {
   const files = fs.readdirSync(UPLOADS_DIR)
     .filter(f => f.endsWith('.wav'))
     .sort();
-  res.json(files.map((f, i) => ({
-    index: i + 1,
-    filename: f,
-    timestamp: parseInt(f.split('_')[0])
-  })));
+  res.json(files.map((f, i) => {
+    const jsonPath = path.join(UPLOADS_DIR, f.replace('.wav', '.json'));
+    let name = '';
+    try {
+      if (fs.existsSync(jsonPath)) {
+        name = JSON.parse(fs.readFileSync(jsonPath, 'utf8')).name || '';
+      }
+    } catch {}
+    return { index: i + 1, filename: f, timestamp: parseInt(f.split('_')[0]), name };
+  }));
 });
 
 // 全録音を結合してダウンロード
@@ -94,6 +102,8 @@ app.delete('/recording/:filename', (req, res) => {
   const filepath = path.join(UPLOADS_DIR, safe);
   if (fs.existsSync(filepath)) {
     fs.unlinkSync(filepath);
+    const jsonPath = filepath.replace('.wav', '.json');
+    if (fs.existsSync(jsonPath)) fs.unlinkSync(jsonPath);
     res.json({ success: true });
   } else {
     res.status(404).json({ error: 'Not found' });
@@ -103,7 +113,7 @@ app.delete('/recording/:filename', (req, res) => {
 // 全削除
 app.delete('/clear', (req, res) => {
   fs.readdirSync(UPLOADS_DIR)
-    .filter(f => f.endsWith('.wav'))
+    .filter(f => f.endsWith('.wav') || f.endsWith('.json'))
     .forEach(f => fs.unlinkSync(path.join(UPLOADS_DIR, f)));
   res.json({ success: true });
 });
