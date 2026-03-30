@@ -131,6 +131,35 @@ app.post('/admin/offset/:id', adminAuth, (req, res) => {
   res.json({ success: true, offset: n });
 });
 
+// ---- 無音カット ----
+function trimSilence(pcmBuffer, numChannels, sampleRate, thresholdRatio = 0.01, paddingMs = 100) {
+  const bytesPerFrame = 2 * numChannels;
+  const totalFrames = Math.floor(pcmBuffer.length / bytesPerFrame);
+  const threshold = Math.floor(32767 * thresholdRatio);
+  const paddingFrames = Math.floor(sampleRate * paddingMs / 1000);
+
+  function isSilentFrame(i) {
+    for (let ch = 0; ch < numChannels; ch++) {
+      const offset = i * bytesPerFrame + ch * 2;
+      if (Math.abs(pcmBuffer.readInt16LE(offset)) > threshold) return false;
+    }
+    return true;
+  }
+
+  let startFrame = 0;
+  for (let i = 0; i < totalFrames; i++) {
+    if (!isSilentFrame(i)) { startFrame = Math.max(0, i - paddingFrames); break; }
+    if (i === totalFrames - 1) return Buffer.alloc(0); // 全部無音
+  }
+
+  let endFrame = totalFrames - 1;
+  for (let i = totalFrames - 1; i >= 0; i--) {
+    if (!isSilentFrame(i)) { endFrame = Math.min(totalFrames - 1, i + paddingFrames); break; }
+  }
+
+  return pcmBuffer.slice(startFrame * bytesPerFrame, (endFrame + 1) * bytesPerFrame);
+}
+
 // ---- WAVダウンロード（管理者） ----
 app.get('/download/:id', adminAuth, (req, res) => {
   const id = path.basename(req.params.id);
@@ -143,7 +172,11 @@ app.get('/download/:id', adminAuth, (req, res) => {
     const numChannels = firstBuf.readUInt16LE(22);
     const sampleRate = firstBuf.readUInt32LE(24);
     const bitDepth = firstBuf.readUInt16LE(34);
-    const totalPCM = Buffer.concat(files.map(f => fs.readFileSync(f).slice(44)));
+    const trimmedChunks = files.map(f => {
+      const pcm = fs.readFileSync(f).slice(44);
+      return trimSilence(pcm, numChannels, sampleRate);
+    }).filter(buf => buf.length > 0);
+    const totalPCM = Buffer.concat(trimmedChunks);
     const header = Buffer.alloc(44);
     header.write('RIFF', 0);
     header.writeUInt32LE(36 + totalPCM.length, 4);
