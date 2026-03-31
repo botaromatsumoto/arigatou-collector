@@ -116,6 +116,16 @@
     .offset-row input:focus { border-color: #3498db; }
     .offset-status { font-size: 0.8rem; color: #27ae60; margin-top: 4px; min-height: 16px; }
 
+    .bgm-section { margin-top: 14px; border-top: 1px solid #f0e0e0; padding-top: 14px; }
+    .bgm-section label { font-size: 0.85rem; color: #888; display: block; margin-bottom: 8px; }
+    .bgm-file-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+    .bgm-file-row input[type="file"] { font-size: 0.82rem; color: #555; flex: 1; min-width: 0; }
+    .bgm-volume-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .bgm-volume-row span { font-size: 0.85rem; color: #888; white-space: nowrap; }
+    .bgm-volume-row input[type="range"] { flex: 1; accent-color: #3498db; }
+    .bgm-vol-label { font-size: 0.85rem; font-weight: bold; color: #3498db; min-width: 36px; }
+    .bgm-status { font-size: 0.82rem; color: #888; margin-top: 6px; min-height: 16px; }
+
     .logout-link {
       display: block; text-align: center; margin-top: 8px;
       font-size: 0.85rem; color: #aaa; cursor: pointer; text-decoration: underline;
@@ -264,6 +274,19 @@ async function loadEvents() {
             <button class="btn btn-gray offset-save-btn" data-id="${ev.id}">保存</button>
           </div>
           <div class="offset-status" id="offset-status-${ev.id}"></div>
+          <div class="bgm-section">
+            <label>BGMつきでダウンロード</label>
+            <div class="bgm-file-row">
+              <input type="file" accept="audio/*" class="bgm-input" data-id="${ev.id}">
+            </div>
+            <div class="bgm-volume-row">
+              <span>BGM音量：</span>
+              <input type="range" min="0" max="100" value="30" class="bgm-volume" data-id="${ev.id}">
+              <span class="bgm-vol-label" id="bgm-vol-label-${ev.id}">30%</span>
+            </div>
+            <button class="btn btn-blue bgm-download-btn" data-id="${ev.id}" ${ev.count === 0 ? 'disabled' : ''}>♪ BGMつきでダウンロード</button>
+            <div class="bgm-status" id="bgm-status-${ev.id}"></div>
+          </div>
         </div>
       `;
       list.appendChild(div);
@@ -315,6 +338,25 @@ async function loadEvents() {
         if (!confirm(`「${this.dataset.name}」を削除しますか？\n録音データもすべて削除されます。`)) return;
         await fetch(`/admin/events/${this.dataset.id}`, { method: 'DELETE', headers: getHeaders() });
         loadEvents();
+      });
+
+      // BGM音量ラベル更新
+      div.querySelector('.bgm-volume').addEventListener('input', function() {
+        document.getElementById(`bgm-vol-label-${this.dataset.id}`).textContent = this.value + '%';
+      });
+
+      // BGMつきダウンロード
+      div.querySelector('.bgm-download-btn').addEventListener('click', async function() {
+        const id = this.dataset.id;
+        const fileInput = div.querySelector(`.bgm-input[data-id="${id}"]`);
+        const volumeInput = div.querySelector(`.bgm-volume[data-id="${id}"]`);
+        if (!fileInput.files[0]) {
+          document.getElementById(`bgm-status-${id}`).textContent = 'BGMファイルを選択してください';
+          return;
+        }
+        this.disabled = true;
+        await downloadWithBGM(id, fileInput.files[0], parseInt(volumeInput.value) / 100);
+        this.disabled = false;
       });
 
       // ベース件数保存
@@ -377,6 +419,87 @@ async function loadRecordings(eventId) {
       });
     });
   } catch { container.innerHTML = '<div class="empty-msg">読み込みに失敗しました</div>'; }
+}
+
+// ---- WAVエンコード ----
+function encodeWAV(audioBuffer) {
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const length = audioBuffer.length * numChannels;
+  const interleaved = new Float32Array(length);
+  for (let ch = 0; ch < numChannels; ch++) {
+    const data = audioBuffer.getChannelData(ch);
+    for (let i = 0; i < audioBuffer.length; i++) interleaved[i * numChannels + ch] = data[i];
+  }
+  const buffer = new ArrayBuffer(44 + length * 2);
+  const view = new DataView(buffer);
+  function writeStr(o, s) { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); }
+  writeStr(0, 'RIFF'); view.setUint32(4, 36 + length * 2, true);
+  writeStr(8, 'WAVE'); writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * 2, true);
+  view.setUint16(32, numChannels * 2, true); view.setUint16(34, 16, true);
+  writeStr(36, 'data'); view.setUint32(40, length * 2, true);
+  let offset = 44;
+  for (let i = 0; i < interleaved.length; i++) {
+    const s = Math.max(-1, Math.min(1, interleaved[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+  return buffer;
+}
+
+// ---- BGMミックスダウンロード ----
+async function downloadWithBGM(eventId, bgmFile, bgmVolume) {
+  const statusEl = document.getElementById(`bgm-status-${eventId}`);
+  statusEl.textContent = '音声を取得中...';
+
+  try {
+    const [voiceRes, bgmArrayBuf] = await Promise.all([
+      fetch(`/download/${eventId}`, { headers: getHeaders() }),
+      bgmFile.arrayBuffer()
+    ]);
+    if (!voiceRes.ok) throw new Error('音声の取得失敗');
+    const voiceArrayBuf = await voiceRes.arrayBuffer();
+
+    statusEl.textContent = 'ミックス中...';
+    const audioCtx = new AudioContext();
+    const [voiceBuf, bgmBuf] = await Promise.all([
+      audioCtx.decodeAudioData(voiceArrayBuf),
+      audioCtx.decodeAudioData(bgmArrayBuf)
+    ]);
+
+    const sampleRate = voiceBuf.sampleRate;
+    const length = voiceBuf.length;
+    const numChannels = voiceBuf.numberOfChannels;
+    const outputBuf = audioCtx.createBuffer(numChannels, length, sampleRate);
+
+    for (let ch = 0; ch < numChannels; ch++) {
+      const voiceData = voiceBuf.getChannelData(ch);
+      const bgmCh = Math.min(ch, bgmBuf.numberOfChannels - 1);
+      const bgmData = bgmBuf.getChannelData(bgmCh);
+      const out = outputBuf.getChannelData(ch);
+      for (let i = 0; i < length; i++) {
+        const bgmSample = bgmData[i % bgmBuf.length] * bgmVolume;
+        out[i] = Math.max(-1, Math.min(1, voiceData[i] + bgmSample));
+      }
+    }
+    await audioCtx.close();
+
+    const wavBuf = encodeWAV(outputBuf);
+    const blob = new Blob([wavBuf], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `arigatou_bgm_${eventId}_${new Date().toISOString().slice(0,10)}.wav`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+    statusEl.textContent = 'ダウンロードしました！';
+    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+  } catch (e) {
+    statusEl.textContent = 'エラー: ' + e.message;
+  }
 }
 
 function escHtml(str) {
