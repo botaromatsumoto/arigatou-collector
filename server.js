@@ -68,6 +68,22 @@ app.post('/admin/events', adminAuth, (req, res) => {
   res.json({ success: true, id, name });
 });
 
+// ---- イベント名変更（管理者） ----
+app.patch('/admin/events/:id', adminAuth, (req, res) => {
+  const id = path.basename(req.params.id);
+  if (!eventExists(id)) return res.status(404).json({ error: 'Not found' });
+  const name = (req.body.name || '').trim().slice(0, 50);
+  if (!name) return res.status(400).json({ error: 'イベント名を入力してください' });
+  const metaPath = path.join(eventDir(id), '_meta.json');
+  try {
+    let meta = {};
+    try { meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')); } catch {}
+    meta.name = name;
+    fs.writeFileSync(metaPath, JSON.stringify(meta));
+    res.json({ success: true, name });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ---- イベント削除（管理者） ----
 app.delete('/admin/events/:id', adminAuth, (req, res) => {
   const id = path.basename(req.params.id);
