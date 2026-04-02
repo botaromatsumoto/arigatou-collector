@@ -102,6 +102,67 @@
     #recordBtn.recording .btn-label { display: none; }
     #recordBtn.recording #countdown { display: block; }
 
+    /* 録音確認エリア */
+    .review-area {
+      display: none;
+      margin-bottom: 28px;
+      background: #f0f9ff;
+      border: 2px solid #b2dfdb;
+      border-radius: 16px;
+      padding: 18px 16px 14px;
+    }
+    .review-area.visible { display: block; }
+
+    .review-label {
+      font-size: 0.9rem;
+      color: #27ae60;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    #previewAudio {
+      width: 100%;
+      margin-bottom: 14px;
+      border-radius: 8px;
+    }
+
+    .review-btns {
+      display: flex;
+      gap: 10px;
+    }
+
+    #okBtn {
+      flex: 1;
+      padding: 14px 10px;
+      border-radius: 12px;
+      border: 2px solid #b2dfdb;
+      background: #e8f8f5;
+      color: #27ae60;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    #okBtn:hover:not(:disabled) { background: #d0f0e8; }
+    #okBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #retakeBtn {
+      flex: 1;
+      padding: 14px 10px;
+      border-radius: 12px;
+      border: 2px solid #f5c6c6;
+      background: #fff8f8;
+      color: #e74c3c;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    #retakeBtn:hover:not(:disabled) { background: #fee; }
+    #retakeBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
     .count-area {
       background: #fff9e6;
       border-radius: 14px;
@@ -117,7 +178,7 @@
       min-height: 24px;
       font-size: 0.95rem;
       color: #555;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
     #status.success { color: #27ae60; font-weight: bold; }
     #status.error { color: #e74c3c; }
@@ -144,42 +205,29 @@
     }
     .name-input-area input:focus { border-color: #e74c3c; }
 
-    .retake-area {
-      display: none;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .retake-area.visible { display: flex; }
-
-    #okBtn {
-      flex: 1;
-      padding: 14px 10px;
+    /* ダウンロードボタン */
+    #downloadBtn {
+      width: 100%;
+      padding: 13px 20px;
       border-radius: 12px;
       border: 2px solid #b2dfdb;
       background: #e8f8f5;
-      color: #27ae60;
-      font-size: 1rem;
+      color: #1a8a6a;
+      font-size: 0.95rem;
       font-weight: bold;
       cursor: pointer;
       font-family: inherit;
       transition: background 0.2s;
     }
-    #okBtn:hover { background: #d0f0e8; }
+    #downloadBtn:hover { background: #c8efe8; }
 
-    #retakeBtn {
-      flex: 1;
-      padding: 14px 10px;
-      border-radius: 12px;
-      border: 2px solid #f5c6c6;
-      background: #fff8f8;
-      color: #e74c3c;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-      font-family: inherit;
-      transition: background 0.2s;
+    .notice {
+      margin-top: 28px;
+      font-size: 0.8rem;
+      color: #aaa;
+      line-height: 1.6;
+      text-align: left;
     }
-    #retakeBtn:hover { background: #fee; }
   </style>
 </head>
 <body>
@@ -200,6 +248,16 @@
       <span id="countdown">3</span>
     </button>
 
+    <!-- 録音確認エリア（録音後・アップロード前に表示） -->
+    <div class="review-area" id="reviewArea">
+      <p class="review-label">録音を確認してください</p>
+      <audio id="previewAudio" controls></audio>
+      <div class="review-btns">
+        <button id="okBtn">OK（保存する）</button>
+        <button id="retakeBtn">やり直す</button>
+      </div>
+    </div>
+
     <div class="count-area">
       <div class="count-label">集まった「ありがとう」</div>
       <div>
@@ -209,10 +267,10 @@
     </div>
 
     <div id="status">ボタンを押してください</div>
-    <div class="retake-area" id="retakeArea">
-      <button id="okBtn">OK</button>
-      <button id="retakeBtn">やり直す</button>
-    </div>
+
+    <button id="downloadBtn">みんなの「ありがとう」をダウンロード</button>
+
+    <p class="notice">お友達からLINEなどでこちらのリンクをもらった場合、録音ボタンを押しても反応しないことがあります。そのときは右下などにある・・・などのボタンをタップしてブラウザで開いてから録音してみてください。</p>
   </div>
 
 <script>
@@ -223,14 +281,18 @@ const countdownEl = document.getElementById('countdown');
 const countNum = document.getElementById('countNum');
 const statusEl = document.getElementById('status');
 const nameInput = document.getElementById('nameInput');
-const retakeArea = document.getElementById('retakeArea');
+const reviewArea = document.getElementById('reviewArea');
+const previewAudio = document.getElementById('previewAudio');
 const okBtn = document.getElementById('okBtn');
 const retakeBtn = document.getElementById('retakeBtn');
+const downloadBtn = document.getElementById('downloadBtn');
 
-let lastRecording = null;
+let pendingWavBlob = null;
+let pendingName = null;
+let pendingAudioUrl = null;
 
-function showRetakeArea() { retakeArea.classList.add('visible'); }
-function hideRetakeArea() { retakeArea.classList.remove('visible'); }
+function showReviewArea() { reviewArea.classList.add('visible'); }
+function hideReviewArea() { reviewArea.classList.remove('visible'); }
 
 // イベント名を表示
 fetch(`/event-info/${eventId}`)
@@ -282,8 +344,10 @@ async function startRecording() {
   const name = nameInput.value.trim();
   if (!name) { setStatus('お名前を入力してください', 'error'); nameInput.focus(); return; }
 
-  lastRecording = null;
-  hideRetakeArea();
+  pendingWavBlob = null;
+  pendingName = null;
+  if (pendingAudioUrl) { URL.revokeObjectURL(pendingAudioUrl); pendingAudioUrl = null; }
+  hideReviewArea();
   recordBtn.disabled = true;
   setStatus('マイクの許可を確認中...', '');
 
@@ -304,30 +368,22 @@ async function startRecording() {
   mediaRecorder.onstop = async () => {
     stream.getTracks().forEach(t => t.stop());
     try {
-      setStatus('サーバーにアップロード中...', '');
+      setStatus('処理中...', '');
       const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
       const arrayBuf = await blob.arrayBuffer();
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const decoded = await audioCtx.decodeAudioData(arrayBuf);
       await audioCtx.close();
-      const wavBlob = new Blob([encodeWAV(decoded)], { type: 'audio/wav' });
+      pendingWavBlob = new Blob([encodeWAV(decoded)], { type: 'audio/wav' });
+      pendingName = name;
 
-      const formData = new FormData();
-      formData.append('audio', wavBlob, 'recording.wav');
-      formData.append('name', name);
-      const res = await fetch(`/upload/${eventId}`, { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('アップロード失敗');
+      pendingAudioUrl = URL.createObjectURL(pendingWavBlob);
+      previewAudio.src = pendingAudioUrl;
+      previewAudio.load();
 
-      const data = await res.json();
-      lastRecording = { filename: data.filename, deleteToken: data.deleteToken, name };
-
-      await refreshCount();
       recordBtn.classList.remove('recording');
-      recordBtn.disabled = false;
-      nameInput.value = '';
-      setStatus('録音を保存しました！', 'success');
-      showRetakeArea();
-      setTimeout(() => setStatus('', ''), 2500);
+      setStatus('録音できました。内容を確認してください。', '');
+      showReviewArea();
     } catch (e) {
       setStatus('エラー: ' + e.message, 'error');
       recordBtn.classList.remove('recording', 'countdown');
@@ -357,6 +413,55 @@ async function startRecording() {
   setTimeout(() => mediaRecorder.stop(), 3000);
 }
 
+// ---- OKボタン（サーバーにアップロード） ----
+okBtn.addEventListener('click', async () => {
+  if (!pendingWavBlob) return;
+
+  okBtn.disabled = true;
+  retakeBtn.disabled = true;
+  setStatus('サーバーに保存中...', '');
+
+  try {
+    const formData = new FormData();
+    formData.append('audio', pendingWavBlob, 'recording.wav');
+    formData.append('name', pendingName);
+    const res = await fetch(`/upload/${eventId}`, { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('アップロード失敗');
+
+    URL.revokeObjectURL(pendingAudioUrl);
+    pendingWavBlob = null;
+    pendingName = null;
+    pendingAudioUrl = null;
+
+    await refreshCount();
+    hideReviewArea();
+    nameInput.value = '';
+    recordBtn.disabled = false;
+    okBtn.disabled = false;
+    retakeBtn.disabled = false;
+    setStatus('録音を保存しました！', 'success');
+    setTimeout(() => setStatus('ボタンを押してください', ''), 2500);
+  } catch (e) {
+    setStatus('エラー: ' + e.message, 'error');
+    okBtn.disabled = false;
+    retakeBtn.disabled = false;
+  }
+});
+
+// ---- やり直すボタン（ローカルデータを破棄して再録音） ----
+retakeBtn.addEventListener('click', () => {
+  if (pendingAudioUrl) { URL.revokeObjectURL(pendingAudioUrl); pendingAudioUrl = null; }
+  pendingWavBlob = null;
+  hideReviewArea();
+  recordBtn.disabled = false;
+  setStatus('もう一度録音してください', '');
+});
+
+// ---- ダウンロードボタン ----
+downloadBtn.addEventListener('click', () => {
+  window.location.href = `/public-download/${eventId}`;
+});
+
 // ---- 件数更新 ----
 async function refreshCount() {
   try {
@@ -367,38 +472,12 @@ async function refreshCount() {
   } catch {}
 }
 
-// ---- ボタン ----
-recordBtn.addEventListener('click', startRecording);
-
-okBtn.addEventListener('click', () => {
-  lastRecording = null;
-  hideRetakeArea();
-  setStatus('ボタンを押してください', '');
-});
-
-retakeBtn.addEventListener('click', async () => {
-  if (!lastRecording) return;
-  try {
-    const res = await fetch(`/recording/${eventId}/${encodeURIComponent(lastRecording.filename)}`, {
-      method: 'DELETE',
-      headers: { 'X-Delete-Token': lastRecording.deleteToken }
-    });
-    if (!res.ok) throw new Error('削除失敗');
-    nameInput.value = lastRecording.name;
-    lastRecording = null;
-    hideRetakeArea();
-    await refreshCount();
-    setStatus('削除しました。もう一度録音してください', '');
-  } catch {
-    setStatus('削除に失敗しました', 'error');
-  }
-});
-
 function setStatus(msg, cls) {
   statusEl.textContent = msg;
   statusEl.className = cls || '';
 }
 
+recordBtn.addEventListener('click', startRecording);
 refreshCount();
 </script>
 </body>
