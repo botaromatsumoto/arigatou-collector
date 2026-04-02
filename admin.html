@@ -126,6 +126,13 @@
     .bgm-vol-label { font-size: 0.85rem; font-weight: bold; color: #3498db; min-width: 36px; }
     .bgm-status { font-size: 0.82rem; color: #888; margin-top: 6px; min-height: 16px; }
 
+    .edit-title-row { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+    .edit-title-input {
+      flex: 1; padding: 6px 10px; border: 2px solid #3498db;
+      border-radius: 8px; font-size: 1rem; font-weight: bold; outline: none;
+      font-family: inherit; color: #333; min-width: 0;
+    }
+
     .logout-link {
       display: block; text-align: center; margin-top: 8px;
       font-size: 0.85rem; color: #aaa; cursor: pointer; text-decoration: underline;
@@ -252,6 +259,7 @@ async function loadEvents() {
       div.innerHTML = `
         <div class="event-header">
           <span class="event-title">${escHtml(ev.name)}</span>
+          <button class="btn btn-gray rename-btn" style="font-size:0.8rem;padding:6px 10px;white-space:nowrap;">✏️ 修正</button>
           <span class="event-count">合計 <span>${total}</span> 件（録音 ${ev.count} 件）</span>
         </div>
         <div class="event-url-row">
@@ -290,6 +298,51 @@ async function loadEvents() {
         </div>
       `;
       list.appendChild(div);
+
+      // タイトル修正
+      div.querySelector('.rename-btn').addEventListener('click', function() {
+        const renameBtn = this;
+        const titleEl = div.querySelector('.event-title');
+        const header = div.querySelector('.event-header');
+
+        titleEl.style.display = 'none';
+        renameBtn.style.display = 'none';
+
+        const editRow = document.createElement('div');
+        editRow.className = 'edit-title-row';
+        editRow.innerHTML = `
+          <input type="text" class="edit-title-input" value="${escHtml(ev.name)}" maxlength="50">
+          <button class="btn btn-primary" style="font-size:0.85rem;padding:7px 12px;white-space:nowrap;">保存</button>
+          <button class="btn btn-gray" style="font-size:0.85rem;padding:7px 12px;white-space:nowrap;">キャンセル</button>
+        `;
+        header.insertBefore(editRow, header.firstChild);
+        editRow.querySelector('input').focus();
+
+        editRow.querySelector('.btn-gray').addEventListener('click', () => {
+          editRow.remove();
+          titleEl.style.display = '';
+          renameBtn.style.display = '';
+        });
+
+        editRow.querySelector('.btn-primary').addEventListener('click', async () => {
+          const newName = editRow.querySelector('input').value.trim();
+          if (!newName) return;
+          try {
+            const res = await fetch(`/admin/events/${ev.id}`, {
+              method: 'PATCH',
+              headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: newName })
+            });
+            if (!res.ok) throw new Error();
+            loadEvents();
+          } catch { alert('保存に失敗しました'); }
+        });
+
+        editRow.querySelector('input').addEventListener('keydown', e => {
+          if (e.key === 'Enter') editRow.querySelector('.btn-primary').click();
+          if (e.key === 'Escape') editRow.querySelector('.btn-gray').click();
+        });
+      });
 
       // コピー
       div.querySelector('.copy-btn').addEventListener('click', function() {
