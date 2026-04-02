@@ -160,6 +160,44 @@ function trimSilence(pcmBuffer, numChannels, sampleRate, thresholdRatio = 0.01, 
   return pcmBuffer.slice(startFrame * bytesPerFrame, (endFrame + 1) * bytesPerFrame);
 }
 
+// ---- WAVダウンロード（公開） ----
+app.get('/public-download/:id', (req, res) => {
+  const id = path.basename(req.params.id);
+  if (!eventExists(id)) return res.status(404).json({ error: 'Not found' });
+  const dir = eventDir(id);
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.wav')).sort().map(f => path.join(dir, f));
+  if (files.length === 0) return res.status(404).json({ error: '録音がまだありません' });
+  try {
+    const firstBuf = fs.readFileSync(files[0]);
+    const numChannels = firstBuf.readUInt16LE(22);
+    const sampleRate = firstBuf.readUInt32LE(24);
+    const bitDepth = firstBuf.readUInt16LE(34);
+    const trimmedChunks = files.map(f => {
+      const pcm = fs.readFileSync(f).slice(44);
+      return trimSilence(pcm, numChannels, sampleRate);
+    }).filter(buf => buf.length > 0);
+    const totalPCM = Buffer.concat(trimmedChunks);
+    const header = Buffer.alloc(44);
+    header.write('RIFF', 0);
+    header.writeUInt32LE(36 + totalPCM.length, 4);
+    header.write('WAVE', 8);
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20);
+    header.writeUInt16LE(numChannels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE(sampleRate * numChannels * (bitDepth / 8), 28);
+    header.writeUInt16LE(numChannels * (bitDepth / 8), 32);
+    header.writeUInt16LE(bitDepth, 34);
+    header.write('data', 36);
+    header.writeUInt32LE(totalPCM.length, 40);
+    const date = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'audio/wav');
+    res.setHeader('Content-Disposition', `attachment; filename="arigatou_${id}_${date}.wav"`);
+    res.send(Buffer.concat([header, totalPCM]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ---- WAVダウンロード（管理者） ----
 app.get('/download/:id', adminAuth, (req, res) => {
   const id = path.basename(req.params.id);
