@@ -101,6 +101,12 @@
     .rec-num { font-weight: bold; color: #e74c3c; min-width: 22px; }
     .rec-name { font-weight: bold; color: #333; }
     .rec-time { color: #aaa; font-size: 0.78rem; }
+    .rec-play {
+      background: none; border: none; cursor: pointer; color: #3498db; font-size: 0.9rem;
+      padding: 2px 6px; border-radius: 5px; transition: color 0.1s, background 0.1s; flex-shrink: 0;
+    }
+    .rec-play:hover { color: #1a6fa8; background: #e8f4fd; }
+    .rec-play.playing { color: #e74c3c; }
     .rec-delete {
       background: none; border: none; cursor: pointer; color: #ccc; font-size: 0.9rem;
       padding: 2px 6px; border-radius: 5px; transition: color 0.1s, background 0.1s; flex-shrink: 0;
@@ -461,9 +467,50 @@ async function loadRecordings(eventId) {
           ${nameStr}
           <span class="rec-time">${time}</span>
         </div>
-        <button class="rec-delete" data-filename="${rec.filename}" title="削除">✕</button>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <button class="rec-play" data-filename="${rec.filename}" title="再生">▶</button>
+          <button class="rec-delete" data-filename="${rec.filename}" title="削除">✕</button>
+        </div>
       `;
       container.appendChild(item);
+
+      // 再生ボタン
+      item.querySelector('.rec-play').addEventListener('click', async function() {
+        const btn = this;
+        // 再生中ならば停止
+        if (btn._audio) {
+          btn._audio.pause();
+          btn._audio = null;
+          btn.textContent = '▶';
+          btn.classList.remove('playing');
+          return;
+        }
+        btn.textContent = '…';
+        btn.disabled = true;
+        try {
+          const res = await fetch(`/recording/${eventId}/${encodeURIComponent(btn.dataset.filename)}`, { headers: getHeaders() });
+          if (!res.ok) throw new Error('取得失敗');
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          btn._audio = audio;
+          btn.textContent = '■';
+          btn.classList.add('playing');
+          btn.disabled = false;
+          audio.play();
+          audio.addEventListener('ended', () => {
+            btn._audio = null;
+            btn.textContent = '▶';
+            btn.classList.remove('playing');
+            URL.revokeObjectURL(url);
+          });
+        } catch {
+          btn.textContent = '▶';
+          btn.disabled = false;
+          alert('再生に失敗しました');
+        }
+      });
+
       item.querySelector('.rec-delete').addEventListener('click', async function() {
         if (!confirm('この録音を削除しますか？')) return;
         await fetch(`/recording/${eventId}/${encodeURIComponent(this.dataset.filename)}`, { method: 'DELETE', headers: getHeaders() });
