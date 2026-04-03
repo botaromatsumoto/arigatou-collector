@@ -252,6 +252,18 @@ app.get('/download/:id', adminAuth, (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ---- 個別再生（管理者） ----
+app.get('/recording/:id/:filename', adminAuth, (req, res) => {
+  const id = path.basename(req.params.id);
+  const safe = path.basename(req.params.filename);
+  if (!eventExists(id)) return res.status(404).json({ error: 'Not found' });
+  if (!safe.endsWith('.wav')) return res.status(400).json({ error: '無効なファイル形式' });
+  const filepath = path.join(eventDir(id), safe);
+  if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'Not found' });
+  res.setHeader('Content-Type', 'audio/wav');
+  res.sendFile(filepath);
+});
+
 // ---- 個別削除（管理者 or 削除トークン） ----
 app.delete('/recording/:id/:filename', (req, res) => {
   const id = path.basename(req.params.id);
